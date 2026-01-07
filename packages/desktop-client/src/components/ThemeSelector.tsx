@@ -13,7 +13,7 @@ import { Popover } from '@actual-app/components/popover';
 
 import type { Theme } from 'loot-core/types/prefs';
 
-import { themeOptions, useTheme } from '@desktop-client/style';
+import { useTheme, useThemeOptions } from '@desktop-client/style';
 
 type ThemeSelectorProps = {
   style?: CSSProperties;
@@ -21,6 +21,7 @@ type ThemeSelectorProps = {
 
 export function ThemeSelector({ style }: ThemeSelectorProps) {
   const [theme, switchTheme] = useTheme();
+  const themeOptions = useThemeOptions();
   const [menuOpen, setMenuOpen] = useState(false);
   const triggerRef = useRef(null);
 
@@ -42,7 +43,8 @@ export function ThemeSelector({ style }: ThemeSelectorProps) {
     switchTheme(newTheme);
   }
 
-  const Icon = themeIcons[theme as ThemeIconKey] || SvgSun;
+  // For custom themes (not in themeIcons), default to MoonStars
+  const Icon = themeIcons[theme as ThemeIconKey] || SvgMoonStars;
 
   if (isNarrowWidth) {
     return null;

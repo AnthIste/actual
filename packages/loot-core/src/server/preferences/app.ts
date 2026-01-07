@@ -111,6 +111,9 @@ async function saveGlobalPrefs(prefs: GlobalPrefs) {
       prefs.notifyWhenUpdateIsAvailable,
     );
   }
+  if (prefs.customThemes !== undefined) {
+    await asyncStorage.setItem('custom-themes', prefs.customThemes);
+  }
   return 'ok';
 }
 
@@ -127,6 +130,7 @@ async function loadGlobalPrefs(): Promise<GlobalPrefs> {
     'server-self-signed-cert': serverSelfSignedCert,
     syncServerConfig,
     notifyWhenUpdateIsAvailable,
+    'custom-themes': customThemes,
   } = await asyncStorage.multiGet([
     'floating-sidebar',
     'category-expanded-state',
@@ -139,7 +143,17 @@ async function loadGlobalPrefs(): Promise<GlobalPrefs> {
     'server-self-signed-cert',
     'syncServerConfig',
     'notifyWhenUpdateIsAvailable',
+    'custom-themes',
   ] as const);
+  // Validate theme: must be a built-in theme or a key in customThemes
+  const isValidTheme =
+    theme === 'light' ||
+    theme === 'dark' ||
+    theme === 'auto' ||
+    theme === 'development' ||
+    theme === 'midnight' ||
+    (customThemes && theme && theme in customThemes);
+
   return {
     floatingSidebar: floatingSidebar === 'true',
     categoryExpandedState: stringToInteger(categoryExpandedState || '') || 0,
@@ -147,14 +161,7 @@ async function loadGlobalPrefs(): Promise<GlobalPrefs> {
     documentDir: documentDir || getDefaultDocumentDir(),
     keyId: encryptKey && JSON.parse(encryptKey).id,
     language,
-    theme:
-      theme === 'light' ||
-      theme === 'dark' ||
-      theme === 'auto' ||
-      theme === 'development' ||
-      theme === 'midnight'
-        ? theme
-        : 'auto',
+    theme: isValidTheme ? theme : 'auto',
     preferredDarkTheme:
       preferredDarkTheme === 'dark' || preferredDarkTheme === 'midnight'
         ? preferredDarkTheme
@@ -165,6 +172,7 @@ async function loadGlobalPrefs(): Promise<GlobalPrefs> {
       notifyWhenUpdateIsAvailable === undefined
         ? true
         : notifyWhenUpdateIsAvailable, // default to true
+    customThemes: customThemes || undefined,
   };
 }
 

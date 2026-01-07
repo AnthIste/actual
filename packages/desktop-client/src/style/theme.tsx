@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { isNonProductionEnvironment } from 'loot-core/shared/environment';
-import type { DarkTheme, Theme } from 'loot-core/types/prefs';
+import type { CustomTheme, DarkTheme, Theme } from 'loot-core/types/prefs';
 
 import * as darkTheme from './themes/dark';
 import * as developmentTheme from './themes/development';
@@ -31,6 +31,37 @@ export const darkThemeOptions = Object.entries({
   midnight: themes.midnight,
 }).map(([key, { name }]) => [key, name] as [DarkTheme, string]);
 
+// Check if a theme ID is a custom theme
+export function isCustomTheme(
+  themeId: string,
+  customThemes: Record<string, CustomTheme> | undefined,
+): boolean {
+  return !(themeId in themes) && !!customThemes && themeId in customThemes;
+}
+
+// Get display name for a custom theme based on its sorted position
+export function getCustomThemeName(
+  themeId: string,
+  customThemes: Record<string, CustomTheme> | undefined,
+): string {
+  if (!customThemes) return 'Custom Theme';
+  const sortedKeys = Object.keys(customThemes).sort();
+  const index = sortedKeys.indexOf(themeId);
+  return index >= 0 ? `Custom Theme ${index + 1}` : 'Custom Theme';
+}
+
+// Get theme colors by name (checks custom themes first, then built-in)
+export function getThemeColors(
+  themeName: string,
+  customThemes?: Record<string, CustomTheme>,
+): Record<string, string> {
+  if (customThemes && themeName in customThemes) {
+    return { ...customThemes[themeName].colors };
+  }
+  const theme = themes[themeName as keyof typeof themes];
+  return theme ? { ...theme.colors } : { ...darkTheme };
+}
+
 export function useTheme() {
   const [theme = 'auto', setThemePref] = useGlobalPref('theme');
   return [theme, setThemePref] as const;
@@ -42,18 +73,49 @@ export function usePreferredDarkTheme() {
   return [darkTheme, setDarkTheme] as const;
 }
 
+export function useCustomThemes() {
+  const [customThemes, setCustomThemes] = useGlobalPref('customThemes');
+  return [customThemes, setCustomThemes] as const;
+}
+
+// Dynamic theme options: built-in themes + custom themes
+export function useThemeOptions(): Array<[Theme, string]> {
+  const [customThemes] = useCustomThemes();
+
+  return useMemo(() => {
+    const options: Array<[Theme, string]> = [...themeOptions];
+
+    if (customThemes) {
+      const sortedKeys = Object.keys(customThemes).sort();
+      sortedKeys.forEach((key, index) => {
+        options.push([key, `Custom Theme ${index + 1}`]);
+      });
+    }
+
+    return options;
+  }, [customThemes]);
+}
+
 export function ThemeStyle() {
   const [activeTheme] = useTheme();
   const [darkThemePreference] = usePreferredDarkTheme();
+  const [customThemes] = useCustomThemes();
   const [themeColors, setThemeColors] = useState<
     | typeof lightTheme
     | typeof darkTheme
     | typeof midnightTheme
     | typeof developmentTheme
+    | Record<string, string>
     | undefined
   >(undefined);
 
   useEffect(() => {
+    // Check if it's a custom theme first
+    if (customThemes && activeTheme in customThemes) {
+      setThemeColors(customThemes[activeTheme].colors);
+      return;
+    }
+
     if (activeTheme === 'auto') {
       const darkTheme = themes[darkThemePreference];
 
@@ -88,12 +150,13 @@ export function ThemeStyle() {
     } else {
       setThemeColors(themes[activeTheme as ThemeKey]?.colors);
     }
-  }, [activeTheme, darkThemePreference]);
+  }, [activeTheme, darkThemePreference, customThemes]);
 
   if (!themeColors) return null;
 
   const css = Object.entries(themeColors)
     .map(([key, value]) => `  --color-${key}: ${value};`)
     .join('\n');
+
   return <style>{`:root {\n${css}}`}</style>;
 }

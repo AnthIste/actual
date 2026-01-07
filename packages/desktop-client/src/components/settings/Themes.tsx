@@ -1,8 +1,11 @@
 import React from 'react';
 import { useTranslation, Trans } from 'react-i18next';
 
+import { Button } from '@actual-app/components/button';
+import { SvgCopy } from '@actual-app/components/icons/v1';
 import { Select } from '@actual-app/components/select';
 import { Text } from '@actual-app/components/text';
+import { Tooltip } from '@actual-app/components/tooltip';
 import { theme as themeStyle } from '@actual-app/components/theme';
 import { tokens } from '@actual-app/components/tokens';
 import { View } from '@actual-app/components/view';
@@ -14,10 +17,12 @@ import { Column, Setting } from './UI';
 
 import { useSidebar } from '@desktop-client/components/sidebar/SidebarProvider';
 import {
-  themeOptions,
   useTheme,
   usePreferredDarkTheme,
+  useCustomThemes,
+  useThemeOptions,
   darkThemeOptions,
+  getThemeColors,
 } from '@desktop-client/style';
 
 export function ThemeSettings() {
@@ -25,6 +30,23 @@ export function ThemeSettings() {
   const sidebar = useSidebar();
   const [theme, switchTheme] = useTheme();
   const [darkTheme, switchDarkTheme] = usePreferredDarkTheme();
+  const [customThemes, setCustomThemes] = useCustomThemes();
+  const themeOptions = useThemeOptions();
+
+  const handleCustomize = () => {
+    // Get colors from the source theme (handles both built-in and custom)
+    const colors = getThemeColors(theme, customThemes);
+
+    // Create new custom theme with timestamp key
+    const newKey = Date.now().toString();
+    const updatedThemes = {
+      ...(customThemes || {}),
+      [newKey]: { colors },
+    };
+
+    setCustomThemes(updatedThemes);
+    switchTheme(newKey);
+  };
 
   return (
     <Setting
@@ -40,22 +62,36 @@ export function ThemeSettings() {
                 : tokens.breakpoint_medium
             })`]: {
               flexDirection: 'row',
+              alignItems: 'flex-end',
             },
           }}
         >
-          <Column title={t('Theme')}>
-            <Select<Theme>
-              onChange={value => {
-                switchTheme(value);
-              }}
-              value={theme}
-              options={themeOptions}
-              className={css({
-                '&[data-hovered]': {
-                  backgroundColor: themeStyle.buttonNormalBackgroundHover,
-                },
-              })}
-            />
+          <Column title={t('Theme')} style={{ flexGrow: 0 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Select<Theme>
+                onChange={value => {
+                  switchTheme(value);
+                }}
+                value={theme}
+                options={themeOptions}
+                className={css({
+                  '&[data-hovered]': {
+                    backgroundColor: themeStyle.buttonNormalBackgroundHover,
+                  },
+                })}
+              />
+              {theme !== 'auto' && (
+                <Tooltip content={t('Copy and customize')}>
+                  <Button
+                    variant="bare"
+                    aria-label={t('Copy and customize')}
+                    onPress={handleCustomize}
+                  >
+                    <SvgCopy style={{ width: 14, height: 14 }} />
+                  </Button>
+                </Tooltip>
+              )}
+            </View>
           </Column>
           {theme === 'auto' && (
             <Column title={t('Dark theme')}>
