@@ -7,49 +7,15 @@ import { Text } from '@actual-app/components/text';
 import { theme } from '@actual-app/components/theme';
 import { View } from '@actual-app/components/view';
 
+import {
+  parseThemeText,
+  serializeThemeColors,
+} from 'loot-core/shared/themes';
+
 import { Setting } from './UI';
 
 import { LabeledCheckbox } from '@desktop-client/components/forms/LabeledCheckbox';
-import {
-  useTheme,
-  useCustomThemes,
-  isCustomTheme,
-} from '@desktop-client/style';
-
-// Parse "key: value;" format into Record<string, string>
-function parseThemeText(text: string): Record<string, string> {
-  const colors: Record<string, string> = {};
-  const lines = text.split('\n');
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('//')) continue;
-
-    const colonIndex = trimmed.indexOf(':');
-    if (colonIndex === -1) continue;
-
-    const key = trimmed.slice(0, colonIndex).trim();
-    let value = trimmed.slice(colonIndex + 1).trim();
-
-    // Remove trailing semicolon if present
-    if (value.endsWith(';')) {
-      value = value.slice(0, -1).trim();
-    }
-
-    if (key && value) {
-      colors[key] = value;
-    }
-  }
-
-  return colors;
-}
-
-// Serialize Record<string, string> to "key: value;" format
-function serializeThemeColors(colors: Record<string, string>): string {
-  return Object.entries(colors)
-    .map(([key, value]) => `${key}: ${value};`)
-    .join('\n');
-}
+import { useTheme, useCustomThemes } from '@desktop-client/style';
 
 export function CustomThemeEditor() {
   const { t } = useTranslation();
@@ -58,7 +24,7 @@ export function CustomThemeEditor() {
   const [showRawValues, setShowRawValues] = useState(false);
   const [filter, setFilter] = useState('');
 
-  const isActive = isCustomTheme(activeTheme, customThemes);
+  const isActive = customThemes !== undefined && activeTheme in customThemes;
 
   const currentColors = useMemo(() => {
     if (!isActive || !customThemes) return {};
@@ -69,15 +35,12 @@ export function CustomThemeEditor() {
     serializeThemeColors(currentColors),
   );
 
-  // Parsed colors from text value for grid view
   const editedColors = useMemo(() => parseThemeText(textValue), [textValue]);
 
-  // Reset text value when switching to a different custom theme
   useMemo(() => {
     setTextValue(serializeThemeColors(currentColors));
   }, [currentColors]);
 
-  // Update a single color in grid mode
   const updateColor = (key: string, value: string) => {
     const newColors = { ...editedColors, [key]: value };
     setTextValue(serializeThemeColors(newColors));
@@ -114,8 +77,6 @@ export function CustomThemeEditor() {
 
     const { [activeTheme]: _, ...remainingThemes } = customThemes;
     const remainingKeys = Object.keys(remainingThemes).sort();
-
-    // Find the previous custom theme (the one before the deleted one)
     const sortedKeys = Object.keys(customThemes).sort();
     const currentIndex = sortedKeys.indexOf(activeTheme);
     const previousKey =
@@ -125,7 +86,6 @@ export function CustomThemeEditor() {
     switchTheme(previousKey || 'light');
   };
 
-  // Only render when a custom theme is active
   if (!isActive) {
     return null;
   }
@@ -148,7 +108,6 @@ export function CustomThemeEditor() {
           <Trans>Show raw values</Trans>
         </LabeledCheckbox>
 
-        {/* Grid editor (default) */}
         {!showRawValues && (
           <View style={{ gap: 8 }}>
             <Input
@@ -241,7 +200,6 @@ export function CustomThemeEditor() {
           </View>
         )}
 
-        {/* Raw text editor */}
         {showRawValues && (
           <textarea
             value={textValue}

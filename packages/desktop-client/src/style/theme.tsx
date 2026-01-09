@@ -1,6 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { isNonProductionEnvironment } from 'loot-core/shared/environment';
+import {
+  deserializeCustomThemes,
+  getCustomThemeName,
+  serializeCustomThemes,
+} from 'loot-core/shared/themes';
 import type { CustomTheme, DarkTheme, Theme } from 'loot-core/types/prefs';
 
 import * as darkTheme from './themes/dark';
@@ -9,6 +14,7 @@ import * as lightTheme from './themes/light';
 import * as midnightTheme from './themes/midnight';
 
 import { useGlobalPref } from '@desktop-client/hooks/useGlobalPref';
+import { useSyncedPref } from '@desktop-client/hooks/useSyncedPref';
 
 const themes = {
   light: { name: 'Light', colors: lightTheme },
@@ -31,26 +37,8 @@ export const darkThemeOptions = Object.entries({
   midnight: themes.midnight,
 }).map(([key, { name }]) => [key, name] as [DarkTheme, string]);
 
-// Check if a theme ID is a custom theme
-export function isCustomTheme(
-  themeId: string,
-  customThemes: Record<string, CustomTheme> | undefined,
-): boolean {
-  return !(themeId in themes) && !!customThemes && themeId in customThemes;
-}
+export { getCustomThemeName };
 
-// Get display name for a custom theme based on its sorted position
-export function getCustomThemeName(
-  themeId: string,
-  customThemes: Record<string, CustomTheme> | undefined,
-): string {
-  if (!customThemes) return 'Custom Theme';
-  const sortedKeys = Object.keys(customThemes).sort();
-  const index = sortedKeys.indexOf(themeId);
-  return index >= 0 ? `Custom Theme ${index + 1}` : 'Custom Theme';
-}
-
-// Get theme colors by name (checks custom themes first, then built-in)
 export function getThemeColors(
   themeName: string,
   customThemes?: Record<string, CustomTheme>,
@@ -73,12 +61,23 @@ export function usePreferredDarkTheme() {
   return [darkTheme, setDarkTheme] as const;
 }
 
-export function useCustomThemes() {
-  const [customThemes, setCustomThemes] = useGlobalPref('customThemes');
-  return [customThemes, setCustomThemes] as const;
+export function useCustomThemes(): [
+  Record<string, CustomTheme> | undefined,
+  (themes: Record<string, CustomTheme> | undefined) => void,
+] {
+  const [json, setJson] = useSyncedPref('customThemes');
+
+  const customThemes = useMemo(() => deserializeCustomThemes(json), [json]);
+
+  const setCustomThemes = useCallback(
+    (t: Record<string, CustomTheme> | undefined) =>
+      setJson(serializeCustomThemes(t)),
+    [setJson],
+  );
+
+  return [customThemes, setCustomThemes];
 }
 
-// Dynamic theme options: built-in themes + custom themes
 export function useThemeOptions(): Array<[Theme, string]> {
   const [customThemes] = useCustomThemes();
 
@@ -110,7 +109,6 @@ export function ThemeStyle() {
   >(undefined);
 
   useEffect(() => {
-    // Check if it's a custom theme first
     if (customThemes && activeTheme in customThemes) {
       setThemeColors(customThemes[activeTheme].colors);
       return;

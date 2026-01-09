@@ -24,6 +24,7 @@ export type SyncedPrefs = Partial<
     | 'currencySpaceBetweenAmountAndSymbol'
     | 'defaultCurrencyCode'
     | 'plugins'
+    | 'customThemes'
     | `show-account-${string}-net-worth-chart`
     | `side-nav.show-balance-history-${string}`
     | `show-balances-${string}`
@@ -97,7 +98,6 @@ export type Theme =
   | string;
 export type DarkTheme = 'dark' | 'midnight';
 
-// Custom theme created by the user (complete copy of all theme colors)
 export type CustomTheme = {
   colors: Record<string, string>;
 };
@@ -122,7 +122,6 @@ export type GlobalPrefs = Partial<{
       colors: Record<string, string>;
     }
   >; // Complete plugin theme metadata
-  customThemes: Record<string, CustomTheme>; // User-created custom themes (key = timestamp)
   documentDir: string; // Electron only
   serverSelfSignedCert: string; // Electron only
   syncServerConfig?: {
@@ -156,7 +155,6 @@ export type GlobalPrefsJson = Partial<{
   'server-self-signed-cert'?: GlobalPrefs['serverSelfSignedCert'];
   syncServerConfig?: GlobalPrefs['syncServerConfig'];
   notifyWhenUpdateIsAvailable?: GlobalPrefs['notifyWhenUpdateIsAvailable'];
-  'custom-themes'?: GlobalPrefs['customThemes'];
 }>;
 
 export type AuthMethods = 'password' | 'openid';

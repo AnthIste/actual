@@ -11,6 +11,7 @@ import { tokens } from '@actual-app/components/tokens';
 import { View } from '@actual-app/components/view';
 import { css } from '@emotion/css';
 
+import { createCustomThemeId } from 'loot-core/shared/themes';
 import { type DarkTheme, type Theme } from 'loot-core/types/prefs';
 
 import { Column, Setting } from './UI';
@@ -34,11 +35,8 @@ export function ThemeSettings() {
   const themeOptions = useThemeOptions();
 
   const handleCustomize = () => {
-    // Get colors from the source theme (handles both built-in and custom)
     const colors = getThemeColors(theme, customThemes);
-
-    // Create new custom theme with timestamp key
-    const newKey = Date.now().toString();
+    const newKey = createCustomThemeId();
     const updatedThemes = {
       ...(customThemes || {}),
       [newKey]: { colors },

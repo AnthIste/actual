@@ -1,5 +1,6 @@
 import * as asyncStorage from '../../platform/server/asyncStorage';
 import * as fs from '../../platform/server/fs';
+import { isCustomThemeId } from '../../shared/themes';
 import { stringToInteger } from '../../shared/util';
 import {
   type GlobalPrefs,
@@ -111,9 +112,6 @@ async function saveGlobalPrefs(prefs: GlobalPrefs) {
       prefs.notifyWhenUpdateIsAvailable,
     );
   }
-  if (prefs.customThemes !== undefined) {
-    await asyncStorage.setItem('custom-themes', prefs.customThemes);
-  }
   return 'ok';
 }
 
@@ -130,7 +128,6 @@ async function loadGlobalPrefs(): Promise<GlobalPrefs> {
     'server-self-signed-cert': serverSelfSignedCert,
     syncServerConfig,
     notifyWhenUpdateIsAvailable,
-    'custom-themes': customThemes,
   } = await asyncStorage.multiGet([
     'floating-sidebar',
     'category-expanded-state',
@@ -143,16 +140,14 @@ async function loadGlobalPrefs(): Promise<GlobalPrefs> {
     'server-self-signed-cert',
     'syncServerConfig',
     'notifyWhenUpdateIsAvailable',
-    'custom-themes',
   ] as const);
-  // Validate theme: must be a built-in theme or a key in customThemes
   const isValidTheme =
     theme === 'light' ||
     theme === 'dark' ||
     theme === 'auto' ||
     theme === 'development' ||
     theme === 'midnight' ||
-    (customThemes && theme && theme in customThemes);
+    (theme && isCustomThemeId(theme));
 
   return {
     floatingSidebar: floatingSidebar === 'true',
@@ -172,7 +167,6 @@ async function loadGlobalPrefs(): Promise<GlobalPrefs> {
       notifyWhenUpdateIsAvailable === undefined
         ? true
         : notifyWhenUpdateIsAvailable, // default to true
-    customThemes: customThemes || undefined,
   };
 }
 
